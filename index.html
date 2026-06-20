@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Terravex — Inteligência econômica global. Mapa interativo e conversor de moedas com dados ao vivo." />
+  <meta name="author" content="Leonardo Farias Martins" />
+  <meta property="og:title" content="Terravex — Inteligência Econômica Global" />
+  <meta property="og:description" content="Mapa de dados econômicos e conversor de moedas com gráfico histórico." />
+  <meta name="theme-color" content="#060a0f" />
+  <title>Terravex</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/cambio.css" />
+</head>
+<body>
+
+  <canvas id="ambient-canvas" aria-hidden="true"></canvas>
+
+  <!-- ══════════════════════════════════════════════════════
+       SIDEBAR
+  ══════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="14" stroke="url(#grad-ring)" stroke-width="1.5"/>
+          <ellipse cx="16" cy="16" rx="6" ry="14" stroke="url(#grad-ring)" stroke-width="1"/>
+          <line x1="2" y1="16" x2="30" y2="16" stroke="url(#grad-ring)" stroke-width="1"/>
+          <line x1="4.5" y1="9" x2="27.5" y2="9" stroke="url(#grad-ring)" stroke-width="0.75" stroke-dasharray="2 2"/>
+          <line x1="4.5" y1="23" x2="27.5" y2="23" stroke="url(#grad-ring)" stroke-width="0.75" stroke-dasharray="2 2"/>
+          <defs>
+            <linearGradient id="grad-ring" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#7c6af7"/>
+              <stop offset="100%" stop-color="#a78bfa"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Terravex</span>
+        <span class="brand-tagline">Inteligência Econômica Global</span>
+      </div>
+    </div>
+
+    <!-- Estado idle -->
+    <div class="panel-idle" id="panel-idle">
+      <div class="idle-visual" aria-hidden="true">
+        <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="60" cy="40" rx="38" ry="38" stroke="#7c6af7" stroke-width="0.8" stroke-opacity="0.3"/>
+          <ellipse cx="60" cy="40" rx="18" ry="38" stroke="#7c6af7" stroke-width="0.5" stroke-opacity="0.2"/>
+          <ellipse cx="60" cy="40" rx="38" ry="14" stroke="#7c6af7" stroke-width="0.5" stroke-opacity="0.2"/>
+          <ellipse cx="60" cy="40" rx="38" ry="28" stroke="#7c6af7" stroke-width="0.5" stroke-opacity="0.15"/>
+          <circle cx="60" cy="40" r="3" fill="#7c6af7" opacity="0.9"/>
+          <circle cx="60" cy="40" r="3" fill="#7c6af7" opacity="0.4">
+            <animate attributeName="r" values="3;10;3" dur="2.5s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.4;0;0.4" dur="2.5s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="32" cy="28" r="1.5" fill="#f0c060" opacity="0.7"/>
+          <circle cx="78" cy="25" r="2" fill="#f0c060" opacity="0.5"/>
+          <circle cx="88" cy="50" r="1.2" fill="#7c6af7" opacity="0.6"/>
+          <circle cx="42" cy="55" r="1.8" fill="#f0c060" opacity="0.4"/>
+        </svg>
+      </div>
+      <h2 class="idle-headline">Selecione um país</h2>
+      <p class="idle-body">Clique em qualquer região do mapa ou use a busca para explorar dados econômicos em tempo real.</p>
+      <div class="idle-counters">
+        <div class="counter-item"><span class="counter-value">237</span><span class="counter-label">países</span></div>
+        <div class="counter-divider" aria-hidden="true"></div>
+        <div class="counter-item"><span class="counter-value">8,2B</span><span class="counter-label">pessoas</span></div>
+        <div class="counter-divider" aria-hidden="true"></div>
+        <div class="counter-item"><span class="counter-value">160+</span><span class="counter-label">moedas</span></div>
+      </div>
+      <div class="idle-suggestions">
+        <p class="suggestions-label">Explorar</p>
+        <div class="suggestions-row" id="suggestions-row"></div>
+      </div>
+    </div>
+
+    <!-- Estado loading -->
+    <div class="panel-loading" id="panel-loading" hidden="hidden">
+      <div class="loading-header">
+        <div class="loading-flag-skeleton"></div>
+        <div class="loading-name-skeleton"></div>
+      </div>
+      <div class="scan-line" aria-hidden="true">
+        <div class="scan-bar"></div>
+        <span class="scan-text" id="scan-text">Conectando à API...</span>
+      </div>
+      <div class="loading-metrics">
+        <div class="metric-skeleton"></div>
+        <div class="metric-skeleton"></div>
+        <div class="metric-skeleton"></div>
+        <div class="metric-skeleton"></div>
+      </div>
+      <div class="loading-rows">
+        <div class="row-skeleton"></div>
+        <div class="row-skeleton short"></div>
+        <div class="row-skeleton"></div>
+        <div class="row-skeleton short"></div>
+      </div>
+    </div>
+
+    <!-- Estado erro -->
+    <div class="panel-error" id="panel-error" hidden="hidden">
+      <div class="error-glyph" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="20" stroke="#7c6af7" stroke-width="1.5" stroke-opacity="0.4"/>
+          <path d="M24 14v12" stroke="#f0c060" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="24" cy="33" r="1.5" fill="#f0c060"/>
+        </svg>
+      </div>
+      <p class="error-title">Dados indisponíveis</p>
+      <p class="error-body" id="error-body">Não foi possível carregar informações para este país.</p>
+      <button class="retry-btn" id="retry-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke-linecap="round"/>
+          <path d="M13.5 2.5v3h-3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Tentar novamente
+      </button>
+    </div>
+
+    <!-- Estado dados -->
+    <div class="panel-data" id="panel-data" hidden="hidden">
+      <div class="data-header">
+        <div class="data-flag" id="d-flag" aria-hidden="true"></div>
+        <div class="data-titles">
+          <h2 class="data-country-name" id="d-name"></h2>
+          <p class="data-region" id="d-region"></p>
+        </div>
+        <button class="panel-close-btn" id="panel-close-btn" aria-label="Fechar painel">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 5L5 15M5 5l10 10" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="metrics-section">
+        <div class="metrics-grid" id="metrics-grid"></div>
+      </div>
+      <div class="data-separator"><span class="separator-label">Dados gerais</span></div>
+      <dl class="info-table" id="info-table"></dl>
+      <div class="panel-foot">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true" class="foot-icon">
+          <circle cx="7" cy="7" r="5.5"/><path d="M7 4v4l2 1.5" stroke-linecap="round"/>
+        </svg>
+        <p class="panel-foot-text">
+          <a href="https://restcountries.com" target="_blank" rel="noopener">REST Countries</a> &amp;
+          <a href="https://api.worldbank.org" target="_blank" rel="noopener">World Bank</a>
+        </p>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════
+       ÁREA PRINCIPAL
+  ══════════════════════════════════════════════════════════ -->
+  <div class="main-area" id="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <nav class="view-tabs" role="tablist" aria-label="Módulos">
+        <button class="tab-btn active" id="tab-map" role="tab" aria-selected="true" aria-controls="view-map" data-view="map">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M1 4l5-2 4 2 5-2v10l-5 2-4-2-5 2V4z" stroke-linejoin="round"/>
+            <path d="M6 2v10M10 4v10" stroke-linecap="round"/>
+          </svg>
+          Mapa
+        </button>
+        <button class="tab-btn" id="tab-cambio" role="tab" aria-selected="false" aria-controls="view-cambio" data-view="cambio">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 5h10M3 5l2-2M3 5l2 2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M13 11H3m10 0l-2-2m2 2l-2 2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          CambioX
+        </button>
+      </nav>
+
+      <!-- Controles do mapa (visíveis só na aba mapa) -->
+      <div class="topbar-map-controls" id="map-controls">
+        <div class="search-container" role="search">
+          <svg class="search-icon-svg" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="8" cy="8" r="5.5"/><path d="M13 13l3 3" stroke-linecap="round"/>
+          </svg>
+          <input id="search-input" type="search" class="search-field" placeholder="Buscar país..." autocomplete="off" spellcheck="false" aria-label="Buscar país" />
+          <ul class="search-list" id="search-list" role="listbox" hidden></ul>
+        </div>
+        <div class="topbar-filter">
+          <span class="topbar-filter-label">Colorir por</span>
+          <div class="segmented-control" role="group">
+            <button class="seg-btn active" data-filter="region">Região</button>
+            <button class="seg-btn" data-filter="population">População</button>
+            <button class="seg-btn" data-filter="area">Área</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- VIEW: Mapa -->
+    <div class="view-panel" id="view-map" role="tabpanel">
+      <div id="map" role="application" aria-label="Mapa mundial interativo"></div>
+      <div class="hover-tip" id="hover-tip" aria-hidden="true">
+        <span class="hover-tip-flag" id="ht-flag"></span>
+        <span class="hover-tip-name" id="ht-name"></span>
+        <span class="hover-tip-region" id="ht-region"></span>
+      </div>
+      <div class="map-legend" id="map-legend"></div>
+    </div>
+
+    <!-- VIEW: CambioX -->
+    <div class="view-panel" id="view-cambio" role="tabpanel" hidden="hidden">
+      <div class="cambio-layout">
+
+        <!-- Conversor principal -->
+        <section class="cambio-card" aria-label="Conversor de moedas">
+          <div class="cambio-header">
+            <div class="cambio-title-block">
+              <h2 class="cambio-title">CambioX</h2>
+              <p class="cambio-subtitle">Taxas de câmbio em tempo real</p>
+            </div>
+            <div class="live-indicator">
+              <span class="live-dot"></span>
+              <span class="live-label">Ao vivo</span>
+            </div>
+          </div>
+
+          <div class="cambio-inputs">
+            <!-- De -->
+            <div class="currency-field">
+              <label class="field-lbl" for="from-amount">Valor</label>
+              <div class="field-row">
+                <div class="currency-select-wrap">
+                  <span class="cur-flag" id="from-flag">🇺🇸</span>
+                  <select id="from-currency" class="cur-select" aria-label="Moeda de origem"></select>
+                </div>
+                <input id="from-amount" type="number" class="amount-field" value="1" min="0" step="any" autocomplete="off" aria-label="Valor a converter"/>
+              </div>
+            </div>
+
+            <!-- Swap -->
+            <button class="swap-btn" id="swap-btn" aria-label="Inverter moedas">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 8V4m0 0L1 7m3-3l3 3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 12v4m0 0l3-3m-3 3l-3-3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+
+            <!-- Para -->
+            <div class="currency-field">
+              <label class="field-lbl" for="to-amount">Resultado</label>
+              <div class="field-row">
+                <div class="currency-select-wrap">
+                  <span class="cur-flag" id="to-flag">🇧🇷</span>
+                  <select id="to-currency" class="cur-select" aria-label="Moeda de destino"></select>
+                </div>
+                <div class="result-display" id="result-display" aria-live="polite">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cambio-rate-bar">
+            <span class="rate-text" id="rate-text">—</span>
+            <button class="copy-rate-btn" id="copy-rate-btn" aria-label="Copiar taxa">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+                <path d="M3 11H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v1" stroke-linecap="round"/>
+              </svg>
+              <span id="copy-label">Copiar</span>
+            </button>
+          </div>
+
+          <div class="quick-refs" id="quick-refs"></div>
+        </section>
+
+        <!-- Gráfico histórico -->
+        <section class="chart-card" aria-label="Histórico da taxa">
+          <div class="chart-header">
+            <div>
+              <h3 class="chart-title" id="chart-title">Histórico — 7 dias</h3>
+              <p class="chart-meta" id="chart-meta">Selecione moedas para ver o gráfico</p>
+            </div>
+            <div class="chart-range-btns" role="group" aria-label="Período">
+              <button class="range-btn active" data-days="7">7D</button>
+              <button class="range-btn" data-days="30">30D</button>
+              <button class="range-btn" data-days="90">90D</button>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="rate-chart" aria-label="Gráfico de variação da taxa"></canvas>
+            <div class="chart-loading" id="chart-loading" hidden="hidden">
+              <div class="chart-spinner"></div>
+              <span>Carregando histórico...</span>
+            </div>
+            <div class="chart-empty" id="chart-empty">
+              <svg viewBox="0 0 48 32" fill="none" aria-hidden="true">
+                <polyline points="2,28 10,18 18,22 28,10 38,14 46,4" stroke="#7c6af7" stroke-width="1.5" stroke-opacity="0.3" stroke-linejoin="round"/>
+              </svg>
+              <span>Aguardando seleção de moedas</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pares populares -->
+        <section class="pairs-card" aria-label="Pares populares">
+          <h3 class="pairs-title">Pares populares</h3>
+          <div class="pairs-grid" id="pairs-grid"></div>
+        </section>
+
+        <!-- Histórico de conversões -->
+        <section class="history-card" aria-label="Histórico">
+          <div class="history-header">
+            <h3 class="pairs-title">Histórico</h3>
+            <button class="clear-btn" id="clear-history-btn">Limpar</button>
+          </div>
+          <ul class="history-list" id="history-list"></ul>
+          <p class="history-empty" id="history-empty">Suas conversões aparecerão aqui.</p>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- Overlay de carregamento inicial -->
+    <div class="init-overlay" id="init-overlay">
+      <div class="init-spinner">
+        <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <circle cx="20" cy="20" r="16" stroke="#1a1f2e" stroke-width="3"/>
+          <path d="M20 4a16 16 0 0 1 16 16" stroke="url(#spin-grad)" stroke-width="3" stroke-linecap="round">
+            <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="0.9s" repeatCount="indefinite"/>
+          </path>
+          <defs>
+            <linearGradient id="spin-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#7c6af7"/>
+              <stop offset="100%" stop-color="#a78bfa"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="init-text">Carregando dados globais...</p>
+    </div>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/cambio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
