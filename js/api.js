@@ -18,6 +18,18 @@ const API = (() => {
 
   const cache = new Map();
   const TTL   = 15 * 60 * 1000;
+  const REQUEST_TIMEOUT = 30000;
+
+  async function fetchWithTimeout(url) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    try {
+      return await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   /* ── Cache ──────────────────────────────────────────────── */
   async function fetchCached(url) {
@@ -25,7 +37,7 @@ const API = (() => {
     const hit = cache.get(url);
     if (hit && now - hit.ts < TTL) return hit.data;
 
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`HTTP ${res.status} — ${url}`);
 
     const data = await res.json();

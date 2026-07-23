@@ -84,6 +84,20 @@ const Cambio = (() => {
   let rateCache    = new Map();
   let histCache    = new Map();
   const CACHE_TTL  = 10 * 60 * 1000;
+  const REQUEST_TIMEOUT = 15000;
+
+  async function fetchJson(url) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   /* ── Helpers de formato ─────────────────────────────────── */
   function fmtNum(n, decimals = 4) {
@@ -117,8 +131,7 @@ const Cambio = (() => {
     const cached = fromCache(rateCache, key);
     if (cached) return cached;
 
-    const res  = await fetch(`https://open.er-api.com/v6/latest/${from}`);
-    const data = await res.json();
+    const data = await fetchJson(`https://open.er-api.com/v6/latest/${from}`);
     if (data.result !== "success") throw new Error("API erro");
 
     // Armazena todas as taxas dessa base de uma vez
@@ -140,8 +153,7 @@ const Cambio = (() => {
     const fmt   = d => d.toISOString().slice(0, 10);
     const url   = `https://api.frankfurter.app/${fmt(start)}..${fmt(end)}?from=${from}&to=${to}`;
 
-    const res  = await fetch(url);
-    const data = await res.json();
+    const data = await fetchJson(url);
     if (!data.rates) throw new Error("Sem histórico");
 
     const result = Object.entries(data.rates)
